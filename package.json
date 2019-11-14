@@ -1,0 +1,26 @@
+{
+  "name": "loadmill.selenium.demo",
+  "version": "1.0.0",
+  "description": "A basic Selenium WebdriverJS + Mocha playground",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/_mocha --require babel-core/register --require babel-polyfill tests"
+  },
+  "author": "idoco",
+  "babel": {
+    "presets": [
+      "env"
+    ]
+  },
+  "dependencies": {
+    "chai": "^4.1.2",
+    "chromedriver": "^78.0.1",
+    "mocha": "^5.2.0",
+    "selenium-webdriver": "^4.0.0-alpha.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.7.0"
+  }
+}
