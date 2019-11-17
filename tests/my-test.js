@@ -1,18 +1,24 @@
-import "chromedriver";
 import { assert } from 'chai';
 import { Builder, By, Key, until } from "selenium-webdriver";
+const chrome = require('selenium-webdriver/chrome');
 const server = 'https://loadmill-test-blog.herokuapp.com'
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 describe('Loadmill selenium demo', function () {
     let driver;
     this.timeout(50000);
 
     before(async () => {
-        driver = new Builder().forBrowser('chrome').build();
+        let chrome_options = new chrome.Options()
+            .addArguments("--auto-open-devtools-for-tabs")
+            .windowSize( {height: 900, width: 1400} );
+
+
+        driver = new Builder()
+            .setChromeOptions(chrome_options)
+            .forBrowser('chrome')
+            .build();
+        // driver.sendDevToolsCommand('Network.enable')
     });
 
     it('Publish a blog post', async function () {
@@ -41,7 +47,7 @@ describe('Loadmill selenium demo', function () {
         // Publish post
         await driver.findElement(By.xpath("//button[.//*[text()='Toggle Settings Menu']]")).click(); // open publish menu
 
-        await driver.wait(until.elementLocated(By.xpath("//a[text()='Publish Now']"))); 
+        await driver.wait(until.elementLocated(By.xpath("//a[text()='Publish Now']")));
         await driver.findElement(By.xpath("//a[text()='Publish Now']")).click(); // click publish
 
         await driver.wait(until.elementLocated(By.xpath("//button[text()='Publish Now']")));
