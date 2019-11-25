@@ -1,8 +1,10 @@
 import { assert } from 'chai';
 import { Builder, By, Key, until } from "selenium-webdriver";
 const chrome = require('selenium-webdriver/chrome');
-const server = 'https://loadmill-test-blog.herokuapp.com'
+const CDP = require('chrome-remote-interface');
+// const fs = require('fs');
 
+const server = 'https://loadmill-test-blog.herokuapp.com'
 
 describe('Loadmill selenium demo', function () {
     let driver;
@@ -10,15 +12,25 @@ describe('Loadmill selenium demo', function () {
 
     before(async () => {
         let chrome_options = new chrome.Options()
-            .addArguments("--auto-open-devtools-for-tabs")
-            .windowSize( {height: 900, width: 1400} );
+        .addArguments("--remote-debugging-port=9222");
 
-
-        driver = new Builder()
+        driver = await new Builder()
             .setChromeOptions(chrome_options)
             .forBrowser('chrome')
             .build();
-        // driver.sendDevToolsCommand('Network.enable')
+
+        const {Network} = await CDP();
+        Network.requestWillBeSent((params) => {
+            console.log('request' + params.requestId);
+            // console.log(params.request.url);            
+            // console.log(params.request.postData);            
+        });
+        Network.responseReceived(async (params) =>  {
+            console.log('response' + params.requestId);
+            // console.log(await Network.getResponseBody({requestId: params.requestId}));
+        });
+        await Network.enable();
+
     });
 
     it('Publish a blog post', async function () {
