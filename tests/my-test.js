@@ -1,10 +1,21 @@
 import { assert } from 'chai';
 import { Builder, By, Key, until } from "selenium-webdriver";
+// import { request } from 'http';
 const chrome = require('selenium-webdriver/chrome');
 const CDP = require('chrome-remote-interface');
-// const fs = require('fs');
+const fs = require('fs');
 
 const server = 'https://loadmill-test-blog.herokuapp.com'
+
+const entries = [];
+
+const convertHeaders = (cdpHeaders) => {
+    if (cdpHeaders) {
+        return Object.entries(cdpHeaders).map(header => ({ name: header[0], value: header[1] }))
+    } else {
+        return null;
+    }
+}
 
 describe('Loadmill selenium demo', function () {
     let driver;
@@ -12,22 +23,58 @@ describe('Loadmill selenium demo', function () {
 
     before(async () => {
         let chrome_options = new chrome.Options()
-        .addArguments("--remote-debugging-port=9222");
+            .addArguments("--remote-debugging-port=9222");
 
         driver = await new Builder()
             .setChromeOptions(chrome_options)
             .forBrowser('chrome')
             .build();
 
-        const {Network} = await CDP();
-        Network.requestWillBeSent((params) => {
-            console.log('request' + params.requestId);
-            // console.log(params.request.url);            
-            // console.log(params.request.postData);            
+        const { Network } = await CDP();
+
+        Network.requestWillBeSent((event) => {
+            const entry = {
+                requestId: event.requestId,
+                startedDateTime: new Date().toISOString(),
+                time: event.timestamp,
+                request: {
+                    method: event.request.method,
+                    url: event.request.url,
+                    headers: convertHeaders(event.request.headers)
+                }
+            };
+            if (event.request.postData) {
+                entry.request.postData = {
+                    mimeType: event.request.headers["Content-Type"],
+                    text: event.request.postData
+                }
+            }
+            entries.push(entry);
+
         });
-        Network.responseReceived(async (params) =>  {
-            console.log('response' + params.requestId);
-            // console.log(await Network.getResponseBody({requestId: params.requestId}));
+
+        Network.responseReceived(async (event) => {
+            const entry = entries.find(({ requestId }) => requestId === event.requestId);
+            const response = event.response;
+            entry.response = {
+                status: response.status,
+                statusText: response.statusText,
+                headers: convertHeaders(response.headers),
+            };
+
+            if (event.response.mimeType) {
+                const responseBody = await Network.getResponseBody({ requestId: event.requestId });
+                const text = responseBody.base64Encoded ?
+                    Buffer.from(responseBody.body, 'base64').toString() :
+                    responseBody.body;
+                entry.response.content = {
+                    size: 100,
+                    mimeType: event.response.mimeType,
+                    text
+                }
+            }
+            // request.response.body = await Network.getResponseBody({ requestId: params.requestId });
+            // console.log(JSON.stringify(request.response.body));
         });
         await Network.enable();
 
@@ -73,6 +120,9 @@ describe('Loadmill selenium demo', function () {
         assert.isTrue(await topBlogPost.isDisplayed(), 'Post title match');
     });
 
-    after(async () => driver.quit());
+    after(async () => {
+        fs.writeFile('test.har', JSON.stringify(entries, null, 4), 'utf8', console.log);
+        driver.quit();
+    });
 });
 
