@@ -65,7 +65,7 @@ describe('Loadmill selenium demo', async function () {
     });
 
     after(async () => {
-        await endRecording('/Users/idoco/Desktop/' + 'create-blog-post.har');
+        await endRecording('create-blog-post.har');
         driver.quit();
     });
 });
