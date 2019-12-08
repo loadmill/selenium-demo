@@ -1,77 +1,26 @@
 import { assert } from 'chai';
 import { Builder, By, Key, until } from "selenium-webdriver";
 const chrome = require('selenium-webdriver/chrome');
-const CDP = require('chrome-remote-interface');
-const fs = require('fs');
+
+const HarCapture = require('../capture-har');
 
 const server = 'https://loadmill-test-blog.herokuapp.com'
 
-const entries = [];
-
-const convertHeaders = (cdpHeaders) => {
-    if (cdpHeaders) {
-        return Object.entries(cdpHeaders).map(header => ({ name: header[0], value: header[1] }))
-    } else {
-        return null;
-    }
-}
-
-describe('Loadmill selenium demo', function () {
+describe('Loadmill selenium demo', async function () {
     let driver;
     this.timeout(50000);
+    const { startRecording, endRecording } = HarCapture();
 
     before(async () => {
         let chrome_options = new chrome.Options()
-            .addArguments("--remote-debugging-port=9222");
+            .addArguments("--remote-debugging-port=9223");
 
         driver = await new Builder()
             .setChromeOptions(chrome_options)
             .forBrowser('chrome')
             .build();
 
-        const { Fetch } = await CDP();
-
-        Fetch.requestPaused(async (event) => {
-
-            const entry = {
-                startedDateTime: new Date().toISOString(),
-                time: event.timestamp,
-                request: {
-                    method: event.request.method,
-                    url: event.request.url,
-                    headers: convertHeaders(event.request.headers)
-                },
-                response: {
-                    status: event.responseStatusCode,
-                    headers: event.responseHeaders,
-                }
-            };
-
-            if (event.request.postData) {
-                entry.request.postData = {
-                    text: event.request.postData,
-                    size: event.request.postData.length,
-                    mimeType: event.request.headers["Content-Type"] || event.request.headers["content-type"]
-                }
-            }
-
-            const responseBody = await Fetch.getResponseBody({ requestId: event.requestId })
-            const bodyString = responseBody.base64Encoded ?
-                Buffer.from(responseBody.body, 'base64').toString() :
-                responseBody.body;
-
-            entry.response.content = {
-                text: bodyString,
-                size: bodyString.length,
-                mimeType: event.responseHeaders.find(header => header.name === 'content-type' || header.name === 'Content-Type').value,
-            }
-
-            entries.push(entry);
-
-            Fetch.continueRequest({ requestId: event.requestId });
-        });
-
-        await Fetch.enable({ patterns: [{ requestStage: 'Response' }] });
+        await startRecording({port: 9223});
 
     });
 
@@ -116,18 +65,7 @@ describe('Loadmill selenium demo', function () {
     });
 
     after(async () => {
-        const har = {
-            log: {
-                version: "1.2",
-                creator: {
-                    name: "Loadmill-Selenuim-Converter",
-                    version: "0.1"
-                },
-                pages: [],
-                entries: entries
-            }
-        }
-        fs.writeFile('test.har', JSON.stringify(har, null, 4), 'utf8', console.log);
+        await endRecording('/Users/idoco/Desktop/' + 'create-blog-post.har');
         driver.quit();
     });
 });
