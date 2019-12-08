@@ -1,6 +1,5 @@
 import { assert } from 'chai';
 import { Builder, By, Key, until } from "selenium-webdriver";
-// import { request } from 'http';
 const chrome = require('selenium-webdriver/chrome');
 const CDP = require('chrome-remote-interface');
 const fs = require('fs');
@@ -30,53 +29,49 @@ describe('Loadmill selenium demo', function () {
             .forBrowser('chrome')
             .build();
 
-        const { Network } = await CDP();
+        const { Fetch } = await CDP();
 
-        Network.requestWillBeSent((event) => {
+        Fetch.requestPaused(async (event) => {
+
             const entry = {
-                requestId: event.requestId,
                 startedDateTime: new Date().toISOString(),
                 time: event.timestamp,
                 request: {
                     method: event.request.method,
                     url: event.request.url,
                     headers: convertHeaders(event.request.headers)
+                },
+                response: {
+                    status: event.responseStatusCode,
+                    headers: event.responseHeaders,
                 }
             };
+
             if (event.request.postData) {
                 entry.request.postData = {
-                    mimeType: event.request.headers["Content-Type"],
-                    text: event.request.postData
+                    text: event.request.postData,
+                    size: event.request.postData.length,
+                    mimeType: event.request.headers["Content-Type"] || event.request.headers["content-type"]
                 }
             }
+
+            const responseBody = await Fetch.getResponseBody({ requestId: event.requestId })
+            const bodyString = responseBody.base64Encoded ?
+                Buffer.from(responseBody.body, 'base64').toString() :
+                responseBody.body;
+
+            entry.response.content = {
+                text: bodyString,
+                size: bodyString.length,
+                mimeType: event.responseHeaders.find(header => header.name === 'content-type' || header.name === 'Content-Type').value,
+            }
+
             entries.push(entry);
 
+            Fetch.continueRequest({ requestId: event.requestId });
         });
 
-        Network.responseReceived(async (event) => {
-            const entry = entries.find(({ requestId }) => requestId === event.requestId);
-            const response = event.response;
-            entry.response = {
-                status: response.status,
-                statusText: response.statusText,
-                headers: convertHeaders(response.headers),
-            };
-
-            if (event.response.mimeType) {
-                const responseBody = await Network.getResponseBody({ requestId: event.requestId });
-                const text = responseBody.base64Encoded ?
-                    Buffer.from(responseBody.body, 'base64').toString() :
-                    responseBody.body;
-                entry.response.content = {
-                    size: 100,
-                    mimeType: event.response.mimeType,
-                    text
-                }
-            }
-            // request.response.body = await Network.getResponseBody({ requestId: params.requestId });
-            // console.log(JSON.stringify(request.response.body));
-        });
-        await Network.enable();
+        await Fetch.enable({ patterns: [{ requestStage: 'Response' }] });
 
     });
 
@@ -121,7 +116,18 @@ describe('Loadmill selenium demo', function () {
     });
 
     after(async () => {
-        fs.writeFile('test.har', JSON.stringify(entries, null, 4), 'utf8', console.log);
+        const har = {
+            log: {
+                version: "1.2",
+                creator: {
+                    name: "Loadmill-Selenuim-Converter",
+                    version: "0.1"
+                },
+                pages: [],
+                entries: entries
+            }
+        }
+        fs.writeFile('test.har', JSON.stringify(har, null, 4), 'utf8', console.log);
         driver.quit();
     });
 });
