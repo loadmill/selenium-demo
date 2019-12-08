@@ -5,4 +5,4 @@ The is a demo of converting the example Selenium test to a Loadmill API test usi
 ### How to run?
  - Install the dependencies by running `npm install`
  - To run the example test by running `npm test`
- - The network recording will be saved to `create-blog-post.har`. Upload it to [Loadmill](loadmill.com) and run it as an API test.
+ - The network recording will be saved to `create-blog-post.har`. Upload it to [Loadmill](https://www.loadmill.com/) and run it as an API test.
