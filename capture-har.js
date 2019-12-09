@@ -1,18 +1,29 @@
 const fs = require('fs');
 const CDP = require('chrome-remote-interface');
 
-function HarCapture() {
+module.exports = function HarCapture() {
     const entries = [];
 
+    /**
+     * @param {*} chromeOptions chrome-remote-interface options like port, host etc.
+     * 
+     * Starts recording a given chrome instance using chrome-remote-interface.
+     * All requests will be stored in the HarCapture instance until endRecording is called.
+     * 
+     * For avilable chrome options see -
+     * https://github.com/cyrus-and/chrome-remote-interface#cdpoptions-callback
+     */
     const startRecording = async (chromeOptions) => {
         const { Fetch } = await CDP(chromeOptions);
+
+        // start listening to Fetch events at the 'Response' stage
+        await Fetch.enable({ patterns: [{ requestStage: 'Response' }] });
 
         Fetch.requestPaused(async (event) => {
 
             // create HAR entry from paused request
             const entry = {
                 startedDateTime: new Date().toISOString(),
-                time: event.timestamp,
                 request: {
                     method: event.request.method,
                     url: event.request.url,
@@ -49,10 +60,14 @@ function HarCapture() {
             Fetch.continueRequest({ requestId: event.requestId });
         });
 
-        await Fetch.enable({ patterns: [{ requestStage: 'Response' }] });
     }
 
-    const endRecording = (filename) => {
+    /**
+     * End the recording and store it to file.
+     * @param {*} path path to store the recording as HAR file.
+     * This function also resets the stored entries
+     */
+    const endRecording = (path) => {
         const har = {
             log: {
                 version: "1.2",
@@ -65,14 +80,19 @@ function HarCapture() {
             }
         }
 
-        fs.writeFileSync(filename, JSON.stringify(har, null, 4), 'utf8', (error) => {
+        fs.writeFileSync(path, JSON.stringify(har, null, 4), 'utf8', (error) => {
             if (error) console.log(error);
         });
+
+        // reset the recording.
+        entries = [];
     }
 
     return { startRecording, endRecording };
 }
 
+// converting headers from the CDP format {header_key: header_value, ...} 
+// to the HAR format [{name:header_key, value: header_value}, ...]
 const convertHeaders = (cdpHeaders) => {
     if (cdpHeaders) {
         return Object.entries(cdpHeaders).map(header => ({ name: header[0], value: header[1] }))
@@ -80,5 +100,3 @@ const convertHeaders = (cdpHeaders) => {
         return null;
     }
 }
-
-module.exports = HarCapture;
