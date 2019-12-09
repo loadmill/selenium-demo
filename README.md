@@ -1,8 +1,16 @@
 ## Convert Flaky UI Tests to Blazing Fast API Tests
 
-The is a demo of converting the example Selenium test to a Loadmill API test using [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/). (Controlled by [chrome-remote-interface](https://github.com/cyrus-and/chrome-remote-interface))
+The is a short demo of converting a Selenium test to a Loadmill API test using the [har-recorder](https://github.com/loadmill/har-recorder) package.
+
+The har-recorder npm module is using the [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/). (Controlled by [chrome-remote-interface](https://github.com/cyrus-and/chrome-remote-interface)) to capture Fatch events from Chrome.
+
+The [example test](tests/my-test.js) for converstion, is a small but flaky test which creates a random post on our demo Ghost blog.
+
 
 ### How to run?
- - Install the dependencies by running `npm install`
+ - clone this repository with `git clone https://github.com/loadmill/selenium-demo.git`
+ - Install its dependencies by running `npm install`
  - To run the example test by running `npm test`
- - The network recording will be saved to `create-blog-post.har`. Upload it to [Loadmill](https://www.loadmill.com/) and run it as an API test.
+ - The network recording will be saved to `create-blog-post.har` in the root folder of the project. 
+ - Login to [Loadmill](https://www.loadmill.com/), and create a new API test suite.
+ - Upload the recording and run it as an API test.
