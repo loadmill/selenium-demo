@@ -9,6 +9,8 @@ const server = 'https://loadmill-test-blog.herokuapp.com'
 describe('Loadmill selenium demo', async function () {
     let driver;
     this.timeout(50000);
+
+    // create an HarCapture  
     const { startRecording, endRecording } = HarCapture();
 
     before(async () => {
@@ -20,7 +22,8 @@ describe('Loadmill selenium demo', async function () {
             .forBrowser('chrome')
             .build();
 
-        await startRecording({port: 9223});
+        // start the recording
+        await startRecording({ port: 9223 });
 
     });
 
@@ -65,7 +68,8 @@ describe('Loadmill selenium demo', async function () {
     });
 
     after(async () => {
-        await endRecording('create-blog-post.har');
+        // stop the recording and save to file 
+        endRecording('create-blog-post.har');
         driver.quit();
     });
 });

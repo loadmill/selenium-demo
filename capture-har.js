@@ -52,7 +52,7 @@ function HarCapture() {
         await Fetch.enable({ patterns: [{ requestStage: 'Response' }] });
     }
 
-    const endRecording = async (filename) => {
+    const endRecording = (filename) => {
         const har = {
             log: {
                 version: "1.2",
@@ -60,11 +60,14 @@ function HarCapture() {
                     name: "Loadmill-Selenuim-Converter",
                     version: "0.1"
                 },
-                pages: [],
+                pages: [], // todo
                 entries: entries
             }
         }
-        fs.writeFile(filename, JSON.stringify(har, null, 4), 'utf8', console.log);
+
+        fs.writeFileSync(filename, JSON.stringify(har, null, 4), 'utf8', (error) => {
+            if (error) console.log(error);
+        });
     }
 
     return { startRecording, endRecording };
