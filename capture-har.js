@@ -2,7 +2,7 @@ const fs = require('fs');
 const CDP = require('chrome-remote-interface');
 
 module.exports = function HarCapture() {
-    const entries = [];
+    let entries = [];
 
     /**
      * @param {*} chromeOptions chrome-remote-interface options like port, host etc.
